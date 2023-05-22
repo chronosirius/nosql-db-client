@@ -34,4 +34,4 @@ class WatchedDict(dict, ABC):
 	def __repr__(self) -> str:
 		return "<WatchedDict "+str(self.val)+">"
 		
-from .observed_list import WatchedList
+from ._observed_list import WatchedList
