@@ -67,4 +67,4 @@ class WatchedList(list, ABC):
 	def __repr__(self) -> str:
 		return '<WatchedList ' + str(self.val)+'>'
 		
-from .observed_dict import WatchedDict
+from ._observed_dict import WatchedDict
