@@ -5,8 +5,11 @@ from threading import Lock
 from .observed_dict import WatchedDict
 from .observed_list import WatchedList
 
+def _f(k):
+	return Ellipsis
+
 class Database(ABC):
-	def __init__(self, dir):
+	def __init__(self, dir, proxy_function=_f):
 		self.dir = dir
 		try:
 			makedirs(self.dir)
@@ -14,6 +17,7 @@ class Database(ABC):
 		except FileExistsError:
 			pass
 		self.lock = Lock()
+		self.proxy_fn = proxy_function
 
 	def __setitem__(self, key, value):
 		try:
@@ -27,6 +31,8 @@ class Database(ABC):
 		self.lock.release()
 
 	def __getitem__(self, key):
+		if (prox_ret := self.proxy_fn()) != Ellipsis:
+			return prox_ret
 		if key in self.keys():
 			self.lock.acquire()
 			with open(f'{self.dir}/{key}', 'r') as f:
