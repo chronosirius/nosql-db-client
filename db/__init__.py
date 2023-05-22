@@ -31,7 +31,7 @@ class Database(ABC):
 		self.lock.release()
 
 	def __getitem__(self, key):
-		if (prox_ret := self.proxy_fn()) != Ellipsis:
+		if (prox_ret := self.proxy_fn(key)) != Ellipsis:
 			return prox_ret
 		if key in self.keys():
 			self.lock.acquire()
