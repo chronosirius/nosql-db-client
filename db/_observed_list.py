@@ -53,7 +53,7 @@ class WatchedList(list, ABC):
 		return item in self.val
 	
 	def __iter__(self):
-		return iter(self[0:len(self.val)])
+		return iter(self.val)
 		
 	def __len__(self):
 		return len(self.val)
