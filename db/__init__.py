@@ -2,8 +2,8 @@ import json
 from abc import ABC
 from os import listdir, remove, makedirs
 from threading import Lock
-from .observed_dict import WatchedDict
-from .observed_list import WatchedList
+from ._observed_dict import WatchedDict
+from ._observed_list import WatchedList
 
 def _f(k):
 	return Ellipsis
