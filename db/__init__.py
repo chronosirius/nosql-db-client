@@ -5,11 +5,8 @@ from threading import Lock
 from ._observed_dict import WatchedDict
 from ._observed_list import WatchedList
 
-def _f(k):
-	return Ellipsis
-
 class Database(ABC):
-	def __init__(self, dir, proxy_function=_f):
+	def __init__(self, dir, proxy_function=None, default_wrapper=None):
 		self.dir = dir
 		try:
 			makedirs(self.dir)
@@ -17,7 +14,11 @@ class Database(ABC):
 		except FileExistsError:
 			pass
 		self.lock = Lock()
-		self.proxy_fn = proxy_function
+		def _f(k): return Ellipsis
+		def _c(v): return v
+		self.proxy_fn = proxy_function or _f
+		self.default_wrapper = default_wrapper or _c
+		self.wrappers = {}
 
 	def __setitem__(self, key, value):
 		try:
@@ -30,7 +31,7 @@ class Database(ABC):
 			f.write(towrite)
 		self.lock.release()
 
-	def __getitem__(self, key):
+	def __getitem__(self, key, wrapper=None):
 		if (prox_ret := self.proxy_fn(key)) != Ellipsis:
 			return prox_ret
 		if key in self.keys():
@@ -38,12 +39,20 @@ class Database(ABC):
 			with open(f'{self.dir}/{key}', 'r') as f:
 				val = json.loads(f.read())
 			self.lock.release()
-			if type(val) is list:
-				return WatchedList(val, self, key)
-			elif type(val) is dict:
-				return WatchedDict(val, self, key)
+			if wrapper is None:
+				if type(val) is list:
+					return self.wrappers.get(list, self.default_wrapper)(WatchedList(val, self, key), trace={'db': self, 'key': key})
+				elif type(val) is dict:
+					return self.wrappers.get(dict, self.default_wrapper)(WatchedDict(val, self, key), trace={'db': self, 'key': key})
+				else:
+					return self.wrappers.get(type(val), self.default_wrapper)(val, trace={'db': self, 'key': key})
 			else:
-				return val
+				if type(val) is list:
+					return wrapper(WatchedList(val, self, key), trace={'db': self, 'key': key})
+				elif type(val) is dict:
+					return wrapper(WatchedDict(val, self, key), trace={'db': self, 'key': key})
+				else:
+					return wrapper(val, trace={'db': self, 'key': key})
 		else:
 			raise KeyError(key)
 
