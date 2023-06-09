@@ -15,7 +15,7 @@ class Database(ABC):
 			pass
 		self.lock = Lock()
 		def _f(k): return Ellipsis
-		def _c(v): return v
+		def _c(v, **kwargs): return v
 		self.proxy_fn = proxy_function or _f
 		self.default_wrapper = default_wrapper or _c
 		self.wrappers = {}
