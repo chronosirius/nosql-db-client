@@ -20,6 +20,10 @@ class WatchedList(list, ABC):
 		e = self.val.pop(index)
 		self.db[self.key] = self.val
 		return e
+
+	def extend(self, otherlist):
+		self.val.extend(otherlist)
+		self.db[self.key] = self.val
 	
 	def __getitem__(self, slice_):
 		#print('getitem called,', slice_)
