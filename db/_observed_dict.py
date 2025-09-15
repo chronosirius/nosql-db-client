@@ -10,6 +10,9 @@ class WatchedDict(dict, ABC):
 	def keys(self):
 		return self.val.keys()
 
+	def values(self):
+		return [self.__getitem__(key) for key in self.keys()]
+
 	def __setitem__(self, key, value):
 		self.val[key] = value
 		self.db[self.key] = self.val
