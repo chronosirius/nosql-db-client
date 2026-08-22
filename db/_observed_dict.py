@@ -9,20 +9,30 @@ class WatchedDict(dict, ABC):
 	def _persist(self):
 		self.db[self.key] = dict(self)
 
+	def _wrap(self, key, value):
+		if isinstance(value, dict):
+			return WatchedDict(value, self, key)
+		if isinstance(value, list):
+			return WatchedList(value, self, key)
+		return value
+
 	def values(self):
 		return [self.__getitem__(key) for key in self]
+
+	def items(self):
+		return [(key, self.__getitem__(key)) for key in self]
 
 	def __setitem__(self, key, value):
 		super().__setitem__(key, value)
 		self._persist()
 
 	def __getitem__(self, key):
-		uncensored = super().__getitem__(key)
-		if isinstance(uncensored, dict):
-			return WatchedDict(uncensored, self, key)
-		elif isinstance(uncensored, list):
-			return WatchedList(uncensored, self, key)
-		return uncensored
+		return self._wrap(key, super().__getitem__(key))
+
+	def get(self, key, default=None):
+		if key in self:
+			return self.__getitem__(key)
+		return default
 		
 	def __delitem__(self, key):
 		super().__delitem__(key)
@@ -49,9 +59,14 @@ class WatchedDict(dict, ABC):
 		super().update(*args, **kwargs)
 		self._persist()
 
+	def __ior__(self, other):
+		result = super().__ior__(other)
+		self._persist()
+		return result
+
 	def setdefault(self, key, default=None):
 		if key in self:
-			return super().__getitem__(key)
+			return self.__getitem__(key)
 		super().__setitem__(key, default)
 		self._persist()
 		return default

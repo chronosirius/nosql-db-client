@@ -56,7 +56,8 @@ class Database(ABC):
 
 	def __delitem__(self, key):
 		if key in self.keys():
-			remove(f'{self.dir}/{key}')
+			with self.lock:
+				remove(f'{self.dir}/{key}')
 		else:
 			raise KeyError(key)
 
