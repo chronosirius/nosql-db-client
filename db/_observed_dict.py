@@ -3,38 +3,63 @@ from abc import ABC
 class WatchedDict(dict, ABC):
 	def __init__(self, val, db, key):
 		super().__init__(val)
-		self.val = val
 		self.db = db
 		self.key = key
 
-	def keys(self):
-		return self.val.keys()
+	def _persist(self):
+		self.db[self.key] = dict(self)
 
 	def values(self):
-		return [self.__getitem__(key) for key in self.keys()]
+		return [self.__getitem__(key) for key in self]
 
 	def __setitem__(self, key, value):
-		self.val[key] = value
-		self.db[self.key] = self.val
+		super().__setitem__(key, value)
+		self._persist()
 
 	def __getitem__(self, key):
-		if key in self.keys():
-			if type(self.val.get(key)) == dict:
-				return WatchedDict(self.val.get(key), self, key)
-			elif type(self.get(key)) == list:
-				return WatchedList(self.val.get(key), self, key)
-			else:
-				return self.val.get(key)
-		else:
-			raise KeyError(key)
+		uncensored = super().__getitem__(key)
+		if isinstance(uncensored, dict):
+			return WatchedDict(uncensored, self, key)
+		elif isinstance(uncensored, list):
+			return WatchedList(uncensored, self, key)
+		return uncensored
 		
-	def __iter__(self):
-		return iter(self.val.keys())
+	def __delitem__(self, key):
+		super().__delitem__(key)
+		self._persist()
+
+	def clear(self):
+		super().clear()
+		self._persist()
+
+	def pop(self, key, default=Ellipsis):
+		if default is Ellipsis:
+			value = super().pop(key)
+		else:
+			value = super().pop(key, default)
+		self._persist()
+		return value
+
+	def popitem(self):
+		item = super().popitem()
+		self._persist()
+		return item
+
+	def update(self, *args, **kwargs):
+		super().update(*args, **kwargs)
+		self._persist()
+
+	def setdefault(self, key, default=None):
+		if key in self:
+			return super().__getitem__(key)
+		super().__setitem__(key, default)
+		self._persist()
+		return default
 
 	def unobserve(self):
-		return self.val
+		return dict(self)
 
 	def __repr__(self) -> str:
-		return "<WatchedDict "+str(self.val)+">"
+		return "<WatchedDict "+str(dict(self))+">"
 		
 from ._observed_list import WatchedList

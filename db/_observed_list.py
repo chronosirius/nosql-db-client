@@ -2,73 +2,93 @@ from abc import ABC
 
 class WatchedList(list, ABC):
 	def __init__(self, val, db, key):
-		self.val = val
+		super().__init__(val)
 		self.db = db
 		self.key = key
 
+	def _persist(self):
+		self.db[self.key] = list(self)
+
 	def append(self, val):
-		self.val.append(val)
-		self.db[self.key] = self.val
-		return self.val
+		super().append(val)
+		self._persist()
+		return self
 
 	def remove(self, val):
-		self.val.remove(val)
-		self.db[self.key] = self.val
+		super().remove(val)
+		self._persist()
 		return self
 	
 	def pop(self, index):
-		e = self.val.pop(index)
-		self.db[self.key] = self.val
+		e = super().pop(index)
+		self._persist()
 		return e
 
 	def extend(self, otherlist):
-		self.val.extend(otherlist)
-		self.db[self.key] = self.val
+		super().extend(otherlist)
+		self._persist()
 	
 	def __getitem__(self, slice_):
-		#print('getitem called,', slice_)
-		if type(slice_) == int:
-			uncensored = self.val[slice_]
-			if type(uncensored) == list:
-				#print(WatchedList(uncensored, self, slice_))
+		uncensored = super().__getitem__(slice_)
+		if isinstance(slice_, int):
+			if isinstance(uncensored, list):
 				return WatchedList(uncensored, self, slice_)
-			elif type(uncensored) == dict:
-				#print(WatchedDict(uncensored, self, slice_))
+			elif isinstance(uncensored, dict):
 				return WatchedDict(uncensored, self, slice_)
-			else:
-				return uncensored
+			return uncensored
 		else:
-			uncensored = self.val[slice_.start:slice_.stop:slice_.step]
 			censored = uncensored.copy()
 			for i, v in enumerate(uncensored):
-				if type(v) == list:
+				if isinstance(v, list):
 					censored[i] = WatchedList(v, self, i)
-				elif type(v) == dict:
+				elif isinstance(v, dict):
 					censored[i] = WatchedDict(v, self, i)
-				else:
-					censored[i] = v
 			return censored
 
 	def __setitem__(self, index, value):
-		self.val[index] = value
-		self.db[self.key] = self.val
+		super().__setitem__(index, value)
+		self._persist()
+
+	def __delitem__(self, index):
+		super().__delitem__(index)
+		self._persist()
+
+	def insert(self, index, value):
+		super().insert(index, value)
+		self._persist()
+
+	def clear(self):
+		super().clear()
+		self._persist()
+
+	def sort(self, *args, **kwargs):
+		super().sort(*args, **kwargs)
+		self._persist()
+
+	def reverse(self):
+		super().reverse()
+		self._persist()
+
+	def __iadd__(self, other):
+		result = super().__iadd__(other)
+		self._persist()
+		return result
+
+	def __imul__(self, value):
+		result = super().__imul__(value)
+		self._persist()
+		return result
 
 	def __contains__(self, item):
-		return item in self.val
-	
-	def __iter__(self):
-		return iter(self.val)
-		
-	def __len__(self):
-		return len(self.val)
+		return super().__contains__(item)
 
 	def unobserve(self):
-		return self.val
+		return list(self)
 
 	def index(self, item):
-		return self.val.index(item)
+		return super().index(item)
 
 	def __repr__(self) -> str:
-		return '<WatchedList ' + str(self.val)+'>'
+		return '<WatchedList ' + str(list(self))+'>'
 		
 from ._observed_dict import WatchedDict

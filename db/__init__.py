@@ -26,19 +26,17 @@ class Database(ABC):
 		except AttributeError:
 			towrite = json.dumps(value, indent=4)
 
-		self.lock.acquire()
-		with open(f'{self.dir}/{key}', 'w+') as f:
-			f.write(towrite)
-		self.lock.release()
+		with self.lock:
+			with open(f'{self.dir}/{key}', 'w+') as f:
+				f.write(towrite)
 
 	def __getitem__(self, key, wrapper=None):
 		if (prox_ret := self.proxy_fn(key)) != Ellipsis:
 			return prox_ret
 		if key in self.keys():
-			self.lock.acquire()
-			with open(f'{self.dir}/{key}', 'r') as f:
-				val = json.loads(f.read())
-			self.lock.release()
+			with self.lock:
+				with open(f'{self.dir}/{key}', 'r') as f:
+					val = json.loads(f.read())
 			if wrapper is None:
 				if type(val) is list:
 					return self.wrappers.get(list, self.default_wrapper)(WatchedList(val, self, key), trace={'db': self, 'key': key})
